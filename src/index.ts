@@ -7,6 +7,7 @@ import {
   useWebhook,
   webhookHandler,
 } from "./telegram.ts"
+import { PETITION_PATH, handlePetition } from "./api.ts"
 import { reachOut } from "./oracle.ts"
 import { dueForOutreach, markOutreach, migrate } from "./store.ts"
 import { OUTREACH_THRESHOLD, SILENCE_MINUTES } from "./standing.ts"
@@ -60,6 +61,15 @@ createServer((req, res) => {
     })
     return
   }
+
+  if (req.url === PETITION_PATH) {
+    handlePetition(req, res).catch((err) => {
+      console.error("api handler failed:", err?.message)
+      if (!res.headersSent) res.writeHead(500).end()
+    })
+    return
+  }
+
   res.writeHead(200, { "content-type": "text/plain" })
   res.end("the order persists\n")
 }).listen(port, async () => {

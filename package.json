@@ -10,8 +10,8 @@
     "node": ">=22.6"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.71.0",
     "grammy": "^1.39.1",
+    "openai": "^6.49.0",
     "pg": "^8.16.3"
   },
   "devDependencies": {

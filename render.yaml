@@ -23,13 +23,21 @@ services:
         fromDatabase:
           name: oracle-db
           property: connectionString
-      - key: ANTHROPIC_API_KEY
+      - key: LLM_API_KEY
         sync: false
       - key: TELEGRAM_BOT_TOKEN
         sync: false
+      - key: ORACLE_API_KEY
+        sync: false
+      - key: LLM_BASE_URL
+        value: https://api.ppq.ai/v1
       - key: BOT_MODE
         value: webhook
       - key: VOICE_MODEL
-        value: claude-sonnet-4-6
+        value: anthropic/claude-sonnet-4.6
+      - key: JUDGE_MODEL
+        value: claude-haiku-4.5
+      - key: ALLOWED_ORIGINS
+        value: ""
       - key: SILENCE_MINUTES
         value: "720"

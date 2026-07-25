@@ -1,6 +1,6 @@
 import { applySeal, stripSeal } from "./cipher.ts"
 import { petitionerContext } from "./prompt.ts"
-import { reflect, speak, weigh } from "./anthropic.ts"
+import { reflect, speak, weigh } from "./llm.ts"
 import {
   appendMessage,
   loadPetitioner,
