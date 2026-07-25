@@ -1,0 +1,22 @@
+{
+  "name": "oracle",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --experimental-strip-types src/index.ts",
+    "dev": "node --watch --experimental-strip-types src/index.ts"
+  },
+  "engines": {
+    "node": ">=22.6"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.0",
+    "grammy": "^1.39.1",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "@types/pg": "^8.15.5",
+    "typescript": "^5.9.2"
+  }
+}

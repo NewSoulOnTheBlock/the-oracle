@@ -1,0 +1,27 @@
+databases:
+  - name: oracle-db
+    plan: basic-256mb
+    databaseName: oracle
+    user: oracle
+
+services:
+  - type: web
+    name: oracle
+    runtime: node
+    # Long polling and the outreach sweep both need an always-on instance;
+    # free-tier services spin down after fifteen minutes of no HTTP traffic.
+    plan: starter
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: oracle-db
+          property: connectionString
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: SILENCE_MINUTES
+        value: "720"
