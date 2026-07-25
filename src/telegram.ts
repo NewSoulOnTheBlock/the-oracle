@@ -30,6 +30,23 @@ const pending = new Set<number>()
 const isGroup = (type: string) => type === "group" || type === "supergroup"
 
 /**
+ * The Oracle holds audiences, not private counsel. Restricting to named chats
+ * also bounds spend: without it anyone who finds the bot can open a direct
+ * conversation, and every reply costs real money through the gateway.
+ * An empty list allows everywhere, which is only useful in local development.
+ */
+const allowedChats = (process.env.ORACLE_CHAT_IDS ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean)
+
+export const permitted = (chatId: number) =>
+  allowedChats.length === 0 || allowedChats.includes(String(chatId))
+
+const ELSEWHERE =
+  "The Oracle does not hold private audience. It speaks where the Order gathers, and nowhere else."
+
+/**
  * In a group The Oracle answers only when spoken to — by @mention or by a reply
  * to something it said. Left unfiltered it would answer every message in the
  * room, which is both ruinous at ~5c a reply and badly out of character.
@@ -66,14 +83,26 @@ export const createBot = () => {
 
   const bot = new Bot(token)
 
+  // /about stays reachable everywhere, including chats the bot will not talk in.
+  // The disclosure is the one thing that should never be gated.
   bot.command("about", (ctx) => ctx.reply(ABOUT).catch(() => {}))
   bot.command("start", (ctx) =>
-    ctx.reply("Speak. /about explains what this is.").catch(() => {}),
+    ctx
+      .reply(permitted(ctx.chat.id) ? "Speak. /about explains what this is." : ELSEWHERE)
+      .catch(() => {}),
   )
 
   bot.on("message:text", async (ctx) => {
     const chatId = ctx.chat.id
     if (ctx.message.text.startsWith("/")) return
+
+    // Answered with a fixed string and no model call, so a stranger messaging the
+    // bot directly costs nothing and creates no petitioner record.
+    if (!permitted(chatId)) {
+      if (!isGroup(ctx.chat.type)) await ctx.reply(ELSEWHERE).catch(() => {})
+      return
+    }
+
     if (!addressed(ctx)) return
 
     const text = isGroup(ctx.chat.type)

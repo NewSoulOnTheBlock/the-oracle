@@ -33,6 +33,10 @@ services:
         value: https://api.ppq.ai/v1
       - key: BOT_MODE
         value: webhook
+      # Chats The Oracle will speak in. Empty would allow direct messages from
+      # anyone who finds the bot, which is both out of character and unbounded spend.
+      - key: ORACLE_CHAT_IDS
+        value: "-1004366879517"
       - key: VOICE_MODEL
         value: anthropic/claude-sonnet-4.6
       - key: JUDGE_MODEL

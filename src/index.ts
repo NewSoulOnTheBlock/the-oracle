@@ -2,6 +2,7 @@ import { createServer } from "node:http"
 import {
   WEBHOOK_PATH,
   createBot,
+  permitted,
   registerWebhook,
   startPolling,
   useWebhook,
@@ -46,6 +47,10 @@ const sweep = async () => {
     const ids = await dueForOutreach(OUTREACH_THRESHOLD, SILENCE_MINUTES)
     for (const id of ids) {
       try {
+        // Audiences recorded before the chat allowlist existed are still in the
+        // table; reaching out to them would reopen exactly what it closed.
+        if (id.startsWith("tg:") && !permitted(Number(id.slice(3)))) continue
+
         const text = await reachOut(id)
         if (bot && id.startsWith("tg:")) {
           await bot.api.sendMessage(Number(id.slice(3)), text)
