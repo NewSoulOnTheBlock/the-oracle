@@ -129,11 +129,19 @@ export const listPeople = async (limit = 200) => {
   return rows
 }
 
-/** Everything one person has ever said, across every audience. */
-export const historyForPerson = async (personId: string, limit = 200) => {
+/**
+ * The conversations a person took part in, replies included. Selecting only
+ * their own rows would return half a dialogue, since The Oracle's answers carry
+ * no person_id — so this pulls whole audiences the person has spoken into.
+ */
+export const historyForPerson = async (personId: string, limit = 400) => {
   const { rows } = await pool.query(
-    `select petitioner_id, role, content, created_at from messages
-     where person_id = $1 order by id desc limit $2`,
+    `select petitioner_id, role, content, author_name, created_at
+     from messages
+     where petitioner_id in (
+       select distinct petitioner_id from messages where person_id = $1
+     )
+     order by id desc limit $2`,
     [personId, limit],
   )
   return rows.reverse()
