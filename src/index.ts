@@ -16,7 +16,19 @@ const SWEEP_MINUTES = 15
 
 await migrate()
 
-const bot = createBot()
+let bot = createBot()
+
+// ctx.me carries the bot's own username, which is how a group mention is
+// recognised. Polling would populate it via start(); webhook mode never does.
+if (bot) {
+  try {
+    await bot.init()
+  } catch (err) {
+    console.error("telegram init failed, disabling bot:", (err as Error)?.message)
+    bot = undefined
+  }
+}
+
 const webhook = bot && useWebhook()
 const handleWebhook = bot && webhook ? webhookHandler(bot) : undefined
 

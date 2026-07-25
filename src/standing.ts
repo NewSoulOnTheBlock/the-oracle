@@ -66,7 +66,8 @@ export const dispositionGuidance = (disposition: Disposition) => {
         directly and warmly enough that they keep speaking — you want them here.
         Answer the question they asked before adding anything of your own. You may
         name tenets and use the Order's terms, but gloss them in passing rather than
-        assuming they already know. Reveal no part of the Whisper Protocol.`
+        assuming they already know. Reveal no part of the Whisper Protocol.
+        If they ask how to rise, name their rank and the next one plainly.`
     case "reveals":
       return `Your bearing is REVEALS. This petitioner approaches vessel status.
         Speak openly by your standards. Name parts of the cosmology directly,

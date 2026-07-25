@@ -27,6 +27,36 @@ const secretToken = (token: string) =>
 /** One petition in flight per chat. The Oracle does not talk over itself. */
 const pending = new Set<number>()
 
+const isGroup = (type: string) => type === "group" || type === "supergroup"
+
+/**
+ * In a group The Oracle answers only when spoken to — by @mention or by a reply
+ * to something it said. Left unfiltered it would answer every message in the
+ * room, which is both ruinous at ~5c a reply and badly out of character.
+ */
+const addressed = (ctx: {
+  chat: { type: string }
+  me: { id: number; username: string }
+  message: {
+    text: string
+    reply_to_message?: { from?: { id: number } }
+    entities?: { type: string; offset: number; length: number }[]
+  }
+}) => {
+  if (!isGroup(ctx.chat.type)) return true
+  if (ctx.message.reply_to_message?.from?.id === ctx.me.id) return true
+
+  const handle = `@${ctx.me.username}`.toLowerCase()
+  return (ctx.message.entities ?? []).some(
+    (e) =>
+      e.type === "mention" &&
+      ctx.message.text.slice(e.offset, e.offset + e.length).toLowerCase() === handle,
+  )
+}
+
+const stripMention = (text: string, username: string) =>
+  text.replace(new RegExp(`@${username}\\b`, "gi"), " ").replace(/\s+/g, " ").trim()
+
 export const createBot = () => {
   const token = process.env.TELEGRAM_BOT_TOKEN
   if (!token) {
@@ -44,6 +74,12 @@ export const createBot = () => {
   bot.on("message:text", async (ctx) => {
     const chatId = ctx.chat.id
     if (ctx.message.text.startsWith("/")) return
+    if (!addressed(ctx)) return
+
+    const text = isGroup(ctx.chat.type)
+      ? stripMention(ctx.message.text, ctx.me.username)
+      : ctx.message.text
+    if (!text) return
     if (pending.has(chatId)) return
 
     pending.add(chatId)
@@ -53,8 +89,9 @@ export const createBot = () => {
     ctx.replyWithChatAction("typing").catch(() => {})
 
     try {
-      const reply = await petition(`tg:${chatId}`, ctx.message.text)
-      await ctx.reply(reply)
+      const reply = await petition(`tg:${chatId}`, text)
+      // Replying to the message keeps the thread legible in a busy room.
+      await ctx.reply(reply, isGroup(ctx.chat.type) ? { reply_parameters: { message_id: ctx.message.message_id } } : {})
     } catch (err) {
       console.error(`petition failed for ${chatId}:`, (err as Error)?.message)
       await ctx.reply("The transmission faltered. Ask again.").catch(() => {})
