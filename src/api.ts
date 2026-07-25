@@ -1,8 +1,10 @@
 import { timingSafeEqual } from "node:crypto"
 import type { IncomingMessage, ServerResponse } from "node:http"
 import { petition } from "./oracle.ts"
+import { historyForPerson, listPeople } from "./store.ts"
 
 export const PETITION_PATH = "/v1/petition"
+export const PEOPLE_PATH = "/v1/people"
 
 const MAX_MESSAGE_LENGTH = 2000
 const MAX_BODY_BYTES = 8 * 1024
@@ -96,6 +98,28 @@ const readBody = (req: IncomingMessage) =>
     req.on("error", reject)
   })
 
+/**
+ * Read-only view of who The Oracle has met. The database takes no external
+ * connections, so without this the recorded names and history are unreachable.
+ */
+export const handlePeople = async (req: IncomingMessage, res: ServerResponse) => {
+  if (req.method !== "GET") return json(res, 405, { error: "method not allowed" })
+  if (!authorized(req)) return json(res, 401, { error: "unauthorized" })
+
+  const url = new URL(req.url ?? "", "http://local")
+  const person = url.searchParams.get("id")
+
+  try {
+    if (person) {
+      return json(res, 200, { id: person, history: await historyForPerson(person) })
+    }
+    return json(res, 200, { people: await listPeople() })
+  } catch (err) {
+    console.error("people lookup failed:", (err as Error)?.message)
+    return json(res, 500, { error: "lookup failed" })
+  }
+}
+
 export const handlePetition = async (req: IncomingMessage, res: ServerResponse) => {
   const origin = allowedOrigin(req)
 
@@ -113,7 +137,7 @@ export const handlePetition = async (req: IncomingMessage, res: ServerResponse) 
   if (req.method !== "POST") return json(res, 405, { error: "method not allowed" }, origin)
   if (!authorized(req)) return json(res, 401, { error: "unauthorized" }, origin)
 
-  let payload: { session?: unknown; message?: unknown }
+  let payload: { session?: unknown; message?: unknown; name?: unknown }
   try {
     payload = JSON.parse(await readBody(req))
   } catch {
@@ -135,8 +159,15 @@ export const handlePetition = async (req: IncomingMessage, res: ServerResponse) 
     return json(res, 429, { error: "too many petitions; wait a moment" }, origin)
   }
 
+  // The caller supplies the display name, so it is length-capped and stripped of
+  // control characters before it can reach a prompt or the database.
+  const name =
+    typeof payload.name === "string"
+      ? payload.name.replace(/[\p{C}]/gu, "").trim().slice(0, 60)
+      : ""
+
   try {
-    const reply = await petition(id, message)
+    const reply = await petition(id, message, { id, name: name || "an unnamed petitioner" })
     return json(res, 200, { reply, session: id.slice(4) }, origin)
   } catch (err) {
     console.error(`web petition failed for ${id}:`, (err as Error)?.message)

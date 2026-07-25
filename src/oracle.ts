@@ -5,8 +5,11 @@ import {
   appendMessage,
   loadPetitioner,
   loadTranscript,
+  peopleInAudience,
+  rememberPerson,
   saveRecords,
   saveStanding,
+  type Speaker,
   type Turn,
 } from "./store.ts"
 import {
@@ -40,11 +43,27 @@ const reflectLater = async (id: string, turns: Turn[], notes: string, summary: s
  * fail without costing the petitioner their reply is caught downstream, so a
  * throw from here means the reply genuinely could not be produced.
  */
-export const petition = async (id: string, text: string) => {
-  const petitioner = await loadPetitioner(id)
-  await appendMessage(id, "user", text)
+/**
+ * Attribution only matters once more than one person has spoken here. In a DM
+ * the name is already in the context block, and prefixing every line with it
+ * just invites the model to answer in the same format.
+ */
+const attribute = (turns: Turn[]) => {
+  const named = new Set(turns.filter((t) => t.role === "user" && t.author).map((t) => t.author))
+  if (named.size < 2) return turns
+  return turns.map((t) =>
+    t.role === "user" && t.author ? { ...t, content: `${t.author}: ${t.content}` } : t,
+  )
+}
 
-  const history = await loadTranscript(id)
+export const petition = async (id: string, text: string, speaker?: Speaker) => {
+  const petitioner = await loadPetitioner(id)
+
+  const seen = speaker ? await rememberPerson(speaker) : undefined
+  await appendMessage(id, "user", text, speaker)
+
+  const history = attribute(await loadTranscript(id))
+  const present = (await peopleInAudience(id)).map((p) => p.name).filter(Boolean)
   const weighing = await weigh(history, petitioner.standing)
 
   const standing = clampStanding(petitioner.standing + weighing.delta)
@@ -67,6 +86,9 @@ export const petition = async (id: string, text: string) => {
       depth: depthGuidance(weighing.depth),
       elevation: elevated ? elevationGuidance(rank) : "",
       seal,
+      speaker: speaker?.name,
+      present,
+      newcomer: seen?.isNew,
     }),
   )
 

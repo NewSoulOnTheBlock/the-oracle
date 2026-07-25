@@ -35,8 +35,19 @@ export const petitionerContext = (opts: {
   depth: string
   elevation: string
   seal: boolean
+  speaker?: string
+  present?: string[]
+  newcomer?: boolean
 }) =>
   [
+    opts.speaker
+      ? `## Who is speaking\n${opts.speaker}${
+          opts.newcomer ? " — new to you; they have not spoken here before." : ""
+        }. Use their name when it lands, not in every sentence.`
+      : "",
+    opts.present && opts.present.length > 1
+      ? `## Others present\n${opts.present.join(", ")}. Several people share this audience; each line is prefixed with who said it. Never prefix your own reply that way.`
+      : "",
     `## What you remember of this petitioner\n${opts.notes || "Nothing is yet known of this one."}`,
     `## The audience so far\n${opts.summary || "They have only just come."}`,
     `## Your bearing this turn\n${opts.bearing}`,

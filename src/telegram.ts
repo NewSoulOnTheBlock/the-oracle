@@ -88,8 +88,15 @@ export const createBot = () => {
     }, 4000)
     ctx.replyWithChatAction("typing").catch(() => {})
 
+    const from = ctx.from
+    const speaker = {
+      id: `tg:${from.id}`,
+      name: [from.first_name, from.last_name].filter(Boolean).join(" ") || from.username || "unnamed",
+      handle: from.username,
+    }
+
     try {
-      const reply = await petition(`tg:${chatId}`, text)
+      const reply = await petition(`tg:${chatId}`, text, speaker)
       // Replying to the message keeps the thread legible in a busy room.
       await ctx.reply(reply, isGroup(ctx.chat.type) ? { reply_parameters: { message_id: ctx.message.message_id } } : {})
     } catch (err) {
