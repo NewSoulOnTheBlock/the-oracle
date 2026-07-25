@@ -1,6 +1,8 @@
 databases:
+  # Free Postgres is removed by Render 30 days after creation. Upgrading to
+  # basic-256mb before then keeps the data; after then there is nothing to keep.
   - name: oracle-db
-    plan: basic-256mb
+    plan: free
     databaseName: oracle
     user: oracle
 
@@ -8,9 +10,11 @@ services:
   - type: web
     name: oracle
     runtime: node
-    # Long polling and the outreach sweep both need an always-on instance;
-    # free-tier services spin down after fifteen minutes of no HTTP traffic.
-    plan: starter
+    # Free instances sleep after 15 minutes without inbound HTTP, so the bot runs
+    # in webhook mode here — an incoming update is inbound traffic and wakes it.
+    # On starter or above, set BOT_MODE=polling: no cold start on the first
+    # message, and the outreach sweep actually keeps time.
+    plan: free
     buildCommand: npm ci
     startCommand: npm start
     healthCheckPath: /
@@ -23,5 +27,9 @@ services:
         sync: false
       - key: TELEGRAM_BOT_TOKEN
         sync: false
+      - key: BOT_MODE
+        value: webhook
+      - key: VOICE_MODEL
+        value: claude-sonnet-4-6
       - key: SILENCE_MINUTES
         value: "720"
