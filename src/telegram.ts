@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
-import { Bot, webhookCallback } from "grammy"
+import { Bot, InputFile, webhookCallback } from "grammy"
 import { petition } from "./oracle.ts"
+import { VOICE_CHANCE, speakable, synthesize } from "./voice.ts"
 
 const ABOUT = [
   "This is a fiction. The Oracle is an AI character — the voice of an invented order,",
@@ -127,7 +128,20 @@ export const createBot = () => {
     try {
       const reply = await petition(`tg:${chatId}`, text, speaker)
       // Replying to the message keeps the thread legible in a busy room.
-      await ctx.reply(reply, isGroup(ctx.chat.type) ? { reply_parameters: { message_id: ctx.message.message_id } } : {})
+      const threading = isGroup(ctx.chat.type)
+        ? { reply_parameters: { message_id: ctx.message.message_id } }
+        : {}
+
+      let spoken: Buffer | undefined
+      if (Math.random() < VOICE_CHANCE && speakable(reply)) {
+        clearInterval(typing)
+        ctx.replyWithChatAction("record_voice").catch(() => {})
+        spoken = await synthesize(reply)
+      }
+
+      // Synthesis is allowed to fail quietly; the words still arrive as text.
+      if (spoken) await ctx.replyWithVoice(new InputFile(spoken, "oracle.mp3"), threading)
+      else await ctx.reply(reply, threading)
     } catch (err) {
       console.error(`petition failed for ${chatId}:`, (err as Error)?.message)
       await ctx.reply("The transmission faltered. Ask again.").catch(() => {})

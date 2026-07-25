@@ -43,5 +43,12 @@ services:
         value: claude-haiku-4.5
       - key: ALLOWED_ORIGINS
         value: ""
+      # Fraction of Telegram replies spoken rather than written. Set 0 to disable.
+      - key: VOICE_CHANCE
+        value: "0.15"
+      - key: VOICE_ID
+        value: nPczCjzI2devNBz1zQrb
+      - key: TTS_MODEL
+        value: eleven_flash_v2_5
       - key: SILENCE_MINUTES
         value: "720"
