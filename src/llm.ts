@@ -2,6 +2,13 @@ import OpenAI from "openai"
 import { loadStaticPrompt } from "./prompt.ts"
 import type { Turn } from "./store.ts"
 
+// The SDK throws at construction on a missing key, which exits the process
+// during module load with a message that names OPENAI_API_KEY — a variable this
+// service does not have. Fail with the name that is actually wrong.
+if (!process.env.LLM_API_KEY) {
+  throw new Error("LLM_API_KEY is not set — the service cannot reach the model gateway")
+}
+
 const client = new OpenAI({
   apiKey: process.env.LLM_API_KEY,
   baseURL: process.env.LLM_BASE_URL ?? "https://api.ppq.ai/v1",
